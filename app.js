@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./src/config/swaggerConfig");
 const routes = require("./src/routes/routes");
@@ -14,6 +15,7 @@ app.use(requestLogger);
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Swagger UI Documentation Endpoint
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

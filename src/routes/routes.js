@@ -3,6 +3,7 @@ const router = express.Router();
 const authRoutes = require("./authRoutes");
 const userRoutes = require("./userRoutes");
 const foodRoutes = require("./foodRoutes");
+const communityRoutes = require("./postRoutes");
 
 /**
  * @swagger
@@ -21,5 +22,6 @@ router.get("/health", (req, res) => {
 router.use("/auth", authRoutes);
 router.use("/user", userRoutes);
 router.use("/food", foodRoutes);
+router.use("/community", communityRoutes);
 
 module.exports = router;
