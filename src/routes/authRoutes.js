@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { register, login, refresh } = require("../controller/authController");
+const { register, login, refresh, forgotPassword, resetPassword } = require("../controller/authController");
 
 /**
  * @swagger
@@ -80,5 +80,61 @@ router.post("/login", login);
  *         description: Invalid or expired refresh token
  */
 router.post("/refresh", refresh);
+
+/**
+ * @swagger
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request Password Reset Token (Simulated email)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: john@example.com
+ *     responses:
+ *       200:
+ *         description: Reset token generated successfully
+ *       400:
+ *         description: Bad request (invalid email format)
+ *       404:
+ *         description: User not found
+ */
+router.post("/forgot-password", forgotPassword);
+
+/**
+ * @swagger
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset User Password
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, password]
+ *             properties:
+ *               token:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 example: newsecret123
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid/expired token or password too short
+ *       404:
+ *         description: User not found
+ */
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

@@ -7,8 +7,10 @@ const {
   findUserById,
   createUser,
   updateUserLoginStatus,
+  updateUserPassword,
 } = require("../models/userModel");
 const { calculateBMI, enrichUserWithBMI } = require("../utils/bmiHelper");
+const { validateUserFields } = require("../utils/validationHelper");
 
 /**
  * User Registration Controller
@@ -29,40 +31,9 @@ const register = async (req, res, next) => {
     } = req.body;
 
     // Validation
-    if (!username || !email || !password) {
-      return sendError(
-        res,
-        "Username, email, and password are required fields.",
-        null,
-        400,
-      );
-    }
-
-    // Validate Email Format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return sendError(res, "Please provide a valid email address.", null, 400);
-    }
-
-    if (age !== undefined && age !== null && age !== "") {
-      const parsedAge = parseInt(age, 10);
-      if (isNaN(parsedAge) || parsedAge <= 0) {
-        return sendError(res, "Age must be a positive number.", null, 400);
-      }
-    }
-
-    if (weight !== undefined && weight !== null && weight !== "") {
-      const parsedWeight = parseFloat(weight);
-      if (isNaN(parsedWeight) || parsedWeight <= 0) {
-        return sendError(res, "Weight must be a positive number.", null, 400);
-      }
-    }
-
-    if (height !== undefined && height !== null && height !== "") {
-      const parsedHeight = parseFloat(height);
-      if (isNaN(parsedHeight) || parsedHeight <= 0) {
-        return sendError(res, "Height must be a positive number.", null, 400);
-      }
+    const validationResult = validateUserFields(req.body, false);
+    if (!validationResult.isValid) {
+      return sendError(res, validationResult.error, null, 400);
     }
 
     // Check if user already exists
@@ -199,8 +170,112 @@ const refresh = async (req, res, next) => {
   }
 };
 
+/**
+ * Forgot Password Controller
+ */
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return sendError(res, "Email is required.", null, 400);
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return sendError(res, "Please provide a valid email address.", null, 400);
+    }
+
+    const user = await findUserByEmailOrUsername(email, "");
+    if (!user) {
+      return sendError(res, "User with this email does not exist.", null, 404);
+    }
+
+    // Generate a stateless reset token signed with JWT_SECRET + user.password hash, expiring in 15 mins
+    const jwtSecret = envVariables.JWT || "default_jwt_secret_key";
+    const secret = jwtSecret + user.password;
+
+    const resetToken = jwt.sign(
+      { userId: user.id, email: user.email },
+      secret,
+      { expiresIn: "15m" }
+    );
+
+    const resetLink = `http://${envVariables.HOST || "localhost"}:${envVariables.PORT || 3000}/api/auth/reset-password?token=${resetToken}`;
+    
+    // Simulate sending email
+    console.log(`\n--- [SIMULATED EMAIL SENT] ---`);
+    console.log(`To: ${user.email}`);
+    console.log(`Subject: Password Reset Link`);
+    console.log(`Link: ${resetLink}`);
+    console.log(`-----------------------------\n`);
+
+    return sendSuccess(res, "Password reset token generated successfully. (Check terminal/logs or response data in dev mode.)", {
+      resetToken,
+      resetLink,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reset Password Controller
+ */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return sendError(res, "Token and new password are required.", null, 400);
+    }
+
+    if (password.length < 6) {
+      return sendError(res, "Password must be at least 6 characters long.", null, 400);
+    }
+
+    // Decode token to get user ID without verification first
+    let decoded;
+    try {
+      decoded = jwt.decode(token);
+      if (!decoded || !decoded.userId) {
+        return sendError(res, "Invalid password reset token format.", null, 400);
+      }
+    } catch (err) {
+      return sendError(res, "Invalid password reset token format.", null, 400);
+    }
+
+    const user = await findUserById(decoded.userId);
+    if (!user) {
+      return sendError(res, "User not found.", null, 404);
+    }
+
+    // Verify token using JWT_SECRET + current password hash
+    const jwtSecret = envVariables.JWT || "default_jwt_secret_key";
+    const secret = jwtSecret + user.password;
+
+    try {
+      jwt.verify(token, secret);
+    } catch (err) {
+      return sendError(res, "Invalid or expired password reset token.", null, 400);
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Save new password and clear refresh token
+    await updateUserPassword(user.id, hashedPassword);
+
+    return sendSuccess(res, "Password has been reset successfully.", null);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   refresh,
+  forgotPassword,
+  resetPassword,
 };

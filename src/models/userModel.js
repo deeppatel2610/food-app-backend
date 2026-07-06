@@ -113,10 +113,54 @@ const updateUserLoginStatus = async (userId, refreshToken, isOnline) => {
   return result.rows[0];
 };
 
+/**
+ * Update user profile
+ */
+const updateUser = async (id, updateData) => {
+  const fields = [];
+  const values = [];
+  let index = 1;
+
+  for (const [key, value] of Object.entries(updateData)) {
+    fields.push(`${key} = $${index}`);
+    values.push(value);
+    index++;
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id);
+  const query = `
+    UPDATE users 
+    SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $${index} AND is_delete = FALSE
+    RETURNING id, first_name, last_name, username, email, age, weight, height, bmi, blood_group, health_problem, is_online, created_at, updated_at;
+  `;
+
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
+/**
+ * Update user password and clear refresh token
+ */
+const updateUserPassword = async (userId, hashedPassword) => {
+  const query = `
+    UPDATE users 
+    SET password = $1, refresh_token = null, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2 AND is_delete = FALSE
+    RETURNING id, username, email;
+  `;
+  const result = await pool.query(query, [hashedPassword, userId]);
+  return result.rows[0];
+};
+
 module.exports = {
   createUserTable,
   findUserByEmailOrUsername,
   findUserById,
   createUser,
   updateUserLoginStatus,
+  updateUser,
+  updateUserPassword,
 };
