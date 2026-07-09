@@ -65,7 +65,7 @@ const createPostRecord = async (postData) => {
 /**
  * Fetches all posts for the community feed with likes count, liked status, and comments list
  */
-const fetchCommunityPosts = async (currentUserId) => {
+const fetchCommunityPosts = async (currentUserId, limit = 10, offset = 0) => {
   const query = `
     SELECT 
       p.id,
@@ -105,9 +105,10 @@ const fetchCommunityPosts = async (currentUserId) => {
       FROM post_likes 
       GROUP BY post_id
     ) l ON l.post_id = p.id
-    ORDER BY p.created_at DESC;
+    ORDER BY p.created_at DESC
+    LIMIT $2 OFFSET $3;
   `;
-  const result = await pool.query(query, [currentUserId]);
+  const result = await pool.query(query, [currentUserId, limit, offset]);
   return result.rows;
 };
 

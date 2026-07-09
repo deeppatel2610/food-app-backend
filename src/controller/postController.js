@@ -68,7 +68,11 @@ const createPost = async (req, res, next) => {
 const getCommunityFeed = async (req, res, next) => {
   try {
     const userId = req.user.userId;
-    const rawPosts = await fetchCommunityPosts(userId);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const rawPosts = await fetchCommunityPosts(userId, limit, offset);
 
     // Map author names and relative times
     const posts = rawPosts.map(post => {
