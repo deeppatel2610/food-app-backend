@@ -5,6 +5,8 @@ const userRoutes = require("./userRoutes");
 const foodRoutes = require("./foodRoutes");
 const communityRoutes = require("./postRoutes");
 
+const pool = require("../config/dbInit");
+
 /**
  * @swagger
  * /health:
@@ -14,9 +16,27 @@ const communityRoutes = require("./postRoutes");
  *     responses:
  *       200:
  *         description: API is running smoothly
+ *       500:
+ *         description: API is running but database is disconnected
  */
-router.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK", message: "API is running smooth!" });
+router.get("/health", async (req, res) => {
+  try {
+    // Run simple query to test DB connectivity
+    await pool.query("SELECT 1");
+    res.status(200).json({ 
+      status: "OK", 
+      message: "API is running smooth!", 
+      database: "Connected" 
+    });
+  } catch (error) {
+    console.error("Health check Database connection failure:", error);
+    res.status(500).json({ 
+      status: "ERROR", 
+      message: "API is active but Database connection failed.", 
+      database: "Disconnected",
+      error: error.message 
+    });
+  }
 });
 
 router.use("/auth", authRoutes);
