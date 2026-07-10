@@ -12,6 +12,10 @@ const options = {
     },
     servers: [
       {
+        url: "/api",
+        description: "Current Host Server (Relative)",
+      },
+      {
         url: `http://${envVariables.HOST}:${envVariables.PORT}/api`,
         description: "Network Server",
       },
