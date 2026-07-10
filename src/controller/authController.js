@@ -11,6 +11,7 @@ const {
 } = require("../models/userModel");
 const { calculateBMI, enrichUserWithBMI } = require("../utils/bmiHelper");
 const { validateUserFields } = require("../utils/validationHelper");
+const { sendPasswordResetEmail } = require("../utils/emailHelper");
 
 /**
  * User Registration Controller
@@ -110,7 +111,10 @@ const login = async (req, res, next) => {
     }
 
     // Secret Key for JWT
-    const jwtSecret = envVariables.JWT || "default_jwt_secret_key";
+    const jwtSecret = envVariables.JWT;
+    if (!jwtSecret) {
+      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+    }
 
     // Generate Access Token (1 Hour) & Refresh Token (7 Days)
     const accessToken = jwt.sign(
@@ -147,7 +151,10 @@ const refresh = async (req, res, next) => {
       return sendError(res, "Refresh token is required.", null, 400);
     }
 
-    const jwtSecret = envVariables.JWT || "default_jwt_secret_key";
+    const jwtSecret = envVariables.JWT;
+    if (!jwtSecret) {
+      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+    }
     const decoded = jwt.verify(refreshToken, jwtSecret);
 
     const user = await findUserById(decoded.userId);
@@ -192,7 +199,10 @@ const forgotPassword = async (req, res, next) => {
     }
 
     // Generate a stateless reset token signed with JWT_SECRET + user.password hash, expiring in 15 mins
-    const jwtSecret = envVariables.JWT || "default_jwt_secret_key";
+    const jwtSecret = envVariables.JWT;
+    if (!jwtSecret) {
+      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+    }
     const secret = jwtSecret + user.password;
 
     const resetToken = jwt.sign(
@@ -203,17 +213,19 @@ const forgotPassword = async (req, res, next) => {
 
     const resetLink = `http://${envVariables.HOST || "localhost"}:${envVariables.PORT || 3000}/api/auth/reset-password?token=${resetToken}`;
     
-    // Simulate sending email
-    console.log(`\n--- [SIMULATED EMAIL SENT] ---`);
-    console.log(`To: ${user.email}`);
-    console.log(`Subject: Password Reset Link`);
-    console.log(`Link: ${resetLink}`);
-    console.log(`-----------------------------\n`);
+    // Dispatch reset email securely
+    await sendPasswordResetEmail(user.email, resetLink);
 
-    return sendSuccess(res, "Password reset token generated successfully. (Check terminal/logs or response data in dev mode.)", {
-      resetToken,
-      resetLink,
-    });
+    // For team testing: expose resetLink in response if not in production mode
+    const responseData = envVariables.NODE_ENV !== "production" ? { resetLink, resetToken } : null;
+
+    return sendSuccess(
+      res,
+      envVariables.NODE_ENV !== "production"
+        ? "Password reset link generated successfully. (Exposed in response for testing/development.)"
+        : "If this email is registered, a password reset link has been sent successfully.",
+      responseData
+    );
   } catch (error) {
     next(error);
   }
@@ -251,7 +263,10 @@ const resetPassword = async (req, res, next) => {
     }
 
     // Verify token using JWT_SECRET + current password hash
-    const jwtSecret = envVariables.JWT || "default_jwt_secret_key";
+    const jwtSecret = envVariables.JWT;
+    if (!jwtSecret) {
+      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+    }
     const secret = jwtSecret + user.password;
 
     try {

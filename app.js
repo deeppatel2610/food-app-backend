@@ -1,13 +1,38 @@
 const express = require("express");
 const path = require("path");
+const cors = require("cors");
+const helmet = require("helmet");
 const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./src/config/swaggerConfig");
 const routes = require("./src/routes/routes");
 const { apiRateLimiter } = require("./src/middleware/rateLimiter");
 const { notFoundHandler, globalErrorHandler } = require("./src/middleware/errorHandler");
 const { requestLogger } = require("./src/middleware/loggerMiddleware");
+const envVariables = require("./src/utils/envVariables");
 
 const app = express();
+
+// Trust proxy for correct client IP detection in rate limiters
+app.set("trust proxy", 1);
+
+// Security headers
+app.use(helmet());
+
+// CORS configuration
+const allowedOrigins = envVariables.ALLOWED_ORIGINS.split(",");
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes("*")) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
 
 // Terminal API Logger Middleware
 app.use(requestLogger);

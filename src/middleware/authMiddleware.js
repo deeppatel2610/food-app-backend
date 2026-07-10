@@ -15,7 +15,11 @@ const verifyToken = (req, res, next) => {
     }
 
     const token = authHeader.split(" ")[1];
-    const jwtSecret = envVariables.JWT || "default_jwt_secret_key";
+    const jwtSecret = envVariables.JWT;
+
+    if (!jwtSecret) {
+      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+    }
 
     const decoded = jwt.verify(token, jwtSecret);
     req.user = decoded; // Attach user payload (userId, username, email) to request
