@@ -19,15 +19,19 @@ app.set("trust proxy", 1);
 app.use(helmet());
 
 // CORS configuration
-const allowedOrigins = envVariables.ALLOWED_ORIGINS.split(",");
+const allowedOrigins = envVariables.ALLOWED_ORIGINS.split(",").map(o => o.trim());
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes("*")) {
+      
+      const isAllowed = allowedOrigins.includes(origin) || allowedOrigins.includes("*");
+      if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error("Not allowed by CORS"));
+        // Return false to block CORS without causing uncaught server error crashes
+        callback(null, false);
       }
     },
     credentials: true,
