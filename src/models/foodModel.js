@@ -23,9 +23,13 @@ const createFoodAnalysisTable = async () => {
   const alterQuery = `
     ALTER TABLE food_analyses ADD COLUMN IF NOT EXISTS is_eat BOOLEAN DEFAULT FALSE;
   `;
+  const indexQuery = `
+    CREATE INDEX IF NOT EXISTS idx_food_analyses_user_id ON food_analyses(user_id);
+  `;
   try {
     await pool.query(createQuery);
     await pool.query(alterQuery);
+    await pool.query(indexQuery);
     console.log("Food analyses table verified / created successfully.");
   } catch (error) {
     console.error("Error creating/altering food_analyses table:", error);

@@ -37,10 +37,19 @@ const createCommunityTables = async () => {
     );
   `;
 
+  const idxPostsUser = `CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);`;
+  const idxLikesUser = `CREATE INDEX IF NOT EXISTS idx_post_likes_user_id ON post_likes(user_id);`;
+  const idxCommentsPost = `CREATE INDEX IF NOT EXISTS idx_post_comments_post_id ON post_comments(post_id);`;
+  const idxCommentsUser = `CREATE INDEX IF NOT EXISTS idx_post_comments_user_id ON post_comments(user_id);`;
+
   try {
     await pool.query(postsQuery);
     await pool.query(likesQuery);
     await pool.query(commentsQuery);
+    await pool.query(idxPostsUser);
+    await pool.query(idxLikesUser);
+    await pool.query(idxCommentsPost);
+    await pool.query(idxCommentsUser);
     console.log("Community / Posts tables verified / created successfully.");
   } catch (error) {
     console.error("Error creating community tables:", error);
@@ -79,7 +88,7 @@ const fetchCommunityPosts = async (currentUserId, limit = 10, offset = 0) => {
       u.first_name AS author_first_name,
       u.last_name AS author_last_name,
       u.username AS author_username,
-      COALESCE(l.likes_count, 0)::int AS likes,
+      (SELECT COUNT(*)::int FROM post_likes WHERE post_id = p.id) AS likes,
       EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $1) AS is_liked,
       COALESCE(
         (
@@ -100,11 +109,6 @@ const fetchCommunityPosts = async (currentUserId, limit = 10, offset = 0) => {
       ) AS comments
     FROM posts p
     JOIN users u ON p.user_id = u.id
-    LEFT JOIN (
-      SELECT post_id, COUNT(*) AS likes_count 
-      FROM post_likes 
-      GROUP BY post_id
-    ) l ON l.post_id = p.id
     ORDER BY p.created_at DESC
     LIMIT $2 OFFSET $3;
   `;
@@ -173,7 +177,7 @@ const fetchUserPosts = async (userId) => {
       u.first_name AS author_first_name,
       u.last_name AS author_last_name,
       u.username AS author_username,
-      COALESCE(l.likes_count, 0)::int AS likes,
+      (SELECT COUNT(*)::int FROM post_likes WHERE post_id = p.id) AS likes,
       EXISTS(SELECT 1 FROM post_likes WHERE post_id = p.id AND user_id = $1) AS is_liked,
       COALESCE(
         (
@@ -194,11 +198,6 @@ const fetchUserPosts = async (userId) => {
       ) AS comments
     FROM posts p
     JOIN users u ON p.user_id = u.id
-    LEFT JOIN (
-      SELECT post_id, COUNT(*) AS likes_count 
-      FROM post_likes 
-      GROUP BY post_id
-    ) l ON l.post_id = p.id
     WHERE p.user_id = $1
     ORDER BY p.created_at DESC;
   `;
