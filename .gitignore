@@ -97,3 +97,23 @@ Thumbs.db
 
 # Runtime Uploads
 uploads/
+
+# SSL certificates and private keys
+*.pem
+*.crt
+*.key
+*.pfx
+*.p12
+
+# PM2 logs & process files
+pm2.log
+pm2.error.log
+
+# Local database volumes
+*_data/
+db_data/
+postgres_data/
+
+# Temporary / Cache folders
+.tmp/
+temp/

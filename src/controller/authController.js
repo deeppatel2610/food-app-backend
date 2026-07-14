@@ -8,7 +8,11 @@ const {
   createUser,
   updateUserLoginStatus,
   updateUserPassword,
+  findUserByGoogleId,
+  findUserByEmail,
+  linkGoogleId,
 } = require("../models/userModel");
+const { verifyGoogleIdToken } = require("../utils/googleAuthHelper");
 const { calculateBMI, enrichUserWithBMI } = require("../utils/bmiHelper");
 const { validateUserFields } = require("../utils/validationHelper");
 const { sendPasswordResetEmail } = require("../utils/emailHelper");
@@ -287,10 +291,96 @@ const resetPassword = async (req, res, next) => {
   }
 };
 
+/**
+ * Google Authentication Controller
+ * Verifies ID token, handles automatic account linking and user registration.
+ */
+const googleAuth = async (req, res, next) => {
+  try {
+    const { idToken, googleId, email, firstName, lastName, bypassVerification } = req.body;
+
+    let googleUser = null;
+
+    // Developer bypass verification if specified and NOT in production
+    if (bypassVerification && envVariables.NODE_ENV !== "production") {
+      if (!googleId || !email) {
+        return sendError(res, "googleId and email are required for bypass authentication.", null, 400);
+      }
+      googleUser = {
+        googleId,
+        email,
+        firstName: firstName || "",
+        lastName: lastName || "",
+        picture: null
+      };
+    } else {
+      if (!idToken) {
+        return sendError(res, "idToken is required.", null, 400);
+      }
+      try {
+        googleUser = await verifyGoogleIdToken(idToken);
+      } catch (err) {
+        return sendError(res, err.message, null, 401);
+      }
+    }
+
+    // Find user by Google ID
+    let user = await findUserByGoogleId(googleUser.googleId);
+
+    if (!user) {
+      // User not found by Google ID, check by Email to link accounts
+      const existingUser = await findUserByEmail(googleUser.email);
+      if (existingUser) {
+        // Link Google ID to existing user account
+        user = await linkGoogleId(existingUser.id, googleUser.googleId);
+      } else {
+        // Create new user record
+        // Google auth users do not have a password or username initially
+        user = await createUser({
+          first_name: googleUser.firstName,
+          last_name: googleUser.lastName,
+          email: googleUser.email,
+          google_id: googleUser.googleId,
+        });
+      }
+    }
+
+    // Secret Key for JWT
+    const jwtSecret = envVariables.JWT;
+    if (!jwtSecret) {
+      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+    }
+
+    // Generate Access Token (1 Hour) & Refresh Token (7 Days)
+    const accessToken = jwt.sign(
+      { userId: user.id, username: user.username, email: user.email },
+      jwtSecret,
+      { expiresIn: "1h" },
+    );
+
+    const refreshToken = jwt.sign({ userId: user.id }, jwtSecret, {
+      expiresIn: "7d",
+    });
+
+    // Update user login status & refresh token in DB
+    await updateUserLoginStatus(user.id, refreshToken, true);
+
+    return sendSuccess(res, "Google authentication successful.", {
+      userId: user.id,
+      accessToken,
+      refreshToken,
+      isNewUser: !user.created_at || (Date.now() - new Date(user.created_at).getTime() < 10000),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
   refresh,
   forgotPassword,
   resetPassword,
+  googleAuth,
 };
