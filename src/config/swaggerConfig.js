@@ -12,6 +12,10 @@ const options = {
     },
     servers: [
       {
+        url: "/api",
+        description: "API Server (/api)",
+      },
+      {
         url: "/food",
         description: "API Gateway Server (Relative)",
       },
@@ -20,8 +24,8 @@ const options = {
         description: "Current Host Server (Relative)",
       },
       {
-        url: `http://${envVariables.HOST}:${envVariables.PORT}`,
-        description: "Network Server",
+        url: `http://${envVariables.HOST}:${envVariables.PORT}/api`,
+        description: "Network Server (/api)",
       },
     ],
     components: {

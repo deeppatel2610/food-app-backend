@@ -82,7 +82,8 @@ app.use(
 // Global Rate Limiter for all APIs
 app.use(apiRateLimiter);
 
-// Main API Routes
+// Main API Routes (mounted on /api and root / for backward & forward compatibility)
+app.use("/api", routes);
 app.use(routes);
 
 // 404 Route Not Found Handler

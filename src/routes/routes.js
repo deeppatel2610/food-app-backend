@@ -4,6 +4,7 @@ const authRoutes = require("./authRoutes");
 const userRoutes = require("./userRoutes");
 const foodRoutes = require("./foodRoutes");
 const communityRoutes = require("./postRoutes");
+const workoutRoutes = require("./workoutRoutes");
 
 const pool = require("../config/dbInit");
 
@@ -43,5 +44,6 @@ router.use("/auth", authRoutes);
 router.use("/user", userRoutes);
 router.use("/food", foodRoutes);
 router.use("/community", communityRoutes);
+router.use("/workout", workoutRoutes);
 
 module.exports = router;
