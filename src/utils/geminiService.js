@@ -29,15 +29,15 @@ async function analyzeFood(
 
   // Optimize and compress image using sharp to reduce payload size and speed up API response
   try {
-    if (mimeType.startsWith("image/")) {
+    if (!mimeType || mimeType.startsWith("image/") || mimeType === "application/octet-stream") {
       processedBuffer = await sharp(imageBuffer)
         .resize({
-          width: 768,
-          height: 768,
+          width: 512,
+          height: 512,
           fit: "inside",
           withoutEnlargement: true,
         })
-        .jpeg({ quality: 75 })
+        .jpeg({ quality: 70 })
         .toBuffer();
       targetMimeType = "image/jpeg";
     }
@@ -48,10 +48,19 @@ async function analyzeFood(
     );
   }
 
-  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+  // Model fallback chain: try ultra-fast gemini-3.5-flash-lite first, then gemini-3.6-flash, then gemini-2.5-flash
+  const modelsToTry = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-2.5-flash",
+  ];
+
+  let lastError;
+
+  for (const modelName of modelsToTry) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+      const generatePromise = ai.models.generateContent({
+        model: modelName,
         contents: [
           {
             parts: [
@@ -126,46 +135,27 @@ RULES:
         },
       });
 
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error("Gemini API request timed out after 25 seconds")),
+          25000,
+        );
+      });
+
+      const response = await Promise.race([generatePromise, timeoutPromise]);
+      clearTimeout(timeoutId);
+
       return response.text;
     } catch (error) {
-      const isRetryable =
-        error.status === 429 ||
-        error.status === 503 ||
-        (error.message && (
-          error.message.includes("429") ||
-          error.message.includes("503") ||
-          error.message.includes("UNAVAILABLE") ||
-          error.message.includes("high demand")
-        ));
-      if (isRetryable && attempt <= retries) {
-        let waitTime = initialDelayMs;
-        try {
-          const parsed = JSON.parse(error.message);
-          const retryInfo = parsed?.error?.details?.find((d) =>
-            d["@type"]?.includes("RetryInfo"),
-          );
-          if (retryInfo?.retryDelay) {
-            const seconds = parseFloat(retryInfo.retryDelay);
-            if (!isNaN(seconds)) {
-              waitTime = Math.ceil(seconds * 1000) + 1000; // Wait requested delay + 1s buffer
-            }
-          }
-        } catch (e) {
-          const match = error.message.match(/retry in ([\d.]+)s/i);
-          if (match && match[1]) {
-            const seconds = parseFloat(match[1]);
-            waitTime = Math.ceil(seconds * 1000) + 1000;
-          }
-        }
-        console.warn(
-          `[Gemini API Transient Error] Status ${error.status || 'unknown'}. Retrying attempt ${attempt}/${retries} after waiting ${waitTime}ms...`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-      } else {
-        throw error;
-      }
+      lastError = error;
+      console.warn(
+        `[Gemini Model Error] Model ${modelName} failed: ${error.message}. Attempting fallback to next model...`,
+      );
     }
   }
+
+  throw lastError || new Error("All Gemini models failed to process the image");
 }
 
 module.exports = {

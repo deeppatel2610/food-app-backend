@@ -6,7 +6,10 @@ const swaggerUi = require("swagger-ui-express");
 const swaggerSpec = require("./src/config/swaggerConfig");
 const routes = require("./src/routes/routes");
 const { apiRateLimiter } = require("./src/middleware/rateLimiter");
-const { notFoundHandler, globalErrorHandler } = require("./src/middleware/errorHandler");
+const {
+  notFoundHandler,
+  globalErrorHandler,
+} = require("./src/middleware/errorHandler");
 const { requestLogger } = require("./src/middleware/loggerMiddleware");
 const envVariables = require("./src/utils/envVariables");
 
@@ -26,18 +29,21 @@ app.use(
         "img-src": ["'self'", "data:", "validator.swagger.io"],
       },
     },
-  })
+  }),
 );
 
 // CORS configuration
-const allowedOrigins = envVariables.ALLOWED_ORIGINS.split(",").map(o => o.trim());
+const allowedOrigins = envVariables.ALLOWED_ORIGINS.split(",").map((o) =>
+  o.trim(),
+);
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
-      
-      const isAllowed = allowedOrigins.includes(origin) || allowedOrigins.includes("*");
+
+      const isAllowed =
+        allowedOrigins.includes(origin) || allowedOrigins.includes("*");
       if (isAllowed) {
         callback(null, true);
       } else {
@@ -46,7 +52,7 @@ app.use(
       }
     },
     credentials: true,
-  })
+  }),
 );
 
 // Terminal API Logger Middleware
@@ -61,20 +67,23 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use(
   "/api-docs",
   (req, res, next) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate",
+    );
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
     next();
   },
   swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec)
+  swaggerUi.setup(swaggerSpec),
 );
 
 // Global Rate Limiter for all APIs
-app.use("/api", apiRateLimiter);
+app.use(apiRateLimiter);
 
 // Main API Routes
-app.use("/api", routes);
+app.use(routes);
 
 // 404 Route Not Found Handler
 app.use(notFoundHandler);

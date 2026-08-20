@@ -67,15 +67,15 @@ const analyzeFoodImage = async (req, res, next) => {
       "Food image analyzed and saved successfully.",
       {
         analysis: parsedResult,
-        recordId: savedRecord.id,
-        isEat: savedRecord.is_eat,
+        recordId: savedRecord ? savedRecord.id : null,
+        isEat: savedRecord ? savedRecord.is_eat : isEat,
       },
       200,
     );
   } catch (error) {
     console.error("Error during food analysis:", error);
 
-    // Graceful handling of Gemini API Quota/Rate Limit (429) and Service Unavailable (503) errors
+    // Graceful handling of Gemini API Quota/Rate Limit (429) and Service Unavailable/Timeout (503/504) errors
     const isRateLimit =
       error.status === 429 || (error.message && error.message.includes("429"));
     const isServiceUnavailable =
@@ -83,7 +83,8 @@ const analyzeFoodImage = async (req, res, next) => {
       (error.message &&
         (error.message.includes("503") ||
           error.message.includes("UNAVAILABLE") ||
-          error.message.includes("high demand")));
+          error.message.includes("high demand") ||
+          error.message.includes("timed out")));
 
     if (isRateLimit) {
       let friendlyMessage =
@@ -103,7 +104,7 @@ const analyzeFoodImage = async (req, res, next) => {
 
     if (isServiceUnavailable) {
       let friendlyMessage =
-        "Gemini AI service is currently experiencing high demand. Please try again in a moment.";
+        "Gemini AI service is currently experiencing high demand or timed out. Please try again in a moment.";
       try {
         const parsed = JSON.parse(error.message);
         if (parsed?.error?.message) {

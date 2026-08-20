@@ -117,7 +117,12 @@ const login = async (req, res, next) => {
     // Secret Key for JWT
     const jwtSecret = envVariables.JWT;
     if (!jwtSecret) {
-      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+      return sendError(
+        res,
+        "Internal server configuration error. JWT key missing.",
+        null,
+        500,
+      );
     }
 
     // Generate Access Token (1 Hour) & Refresh Token (7 Days)
@@ -157,7 +162,12 @@ const refresh = async (req, res, next) => {
 
     const jwtSecret = envVariables.JWT;
     if (!jwtSecret) {
-      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+      return sendError(
+        res,
+        "Internal server configuration error. JWT key missing.",
+        null,
+        500,
+      );
     }
     const decoded = jwt.verify(refreshToken, jwtSecret);
 
@@ -205,30 +215,36 @@ const forgotPassword = async (req, res, next) => {
     // Generate a stateless reset token signed with JWT_SECRET + user.password hash, expiring in 15 mins
     const jwtSecret = envVariables.JWT;
     if (!jwtSecret) {
-      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+      return sendError(
+        res,
+        "Internal server configuration error. JWT key missing.",
+        null,
+        500,
+      );
     }
     const secret = jwtSecret + user.password;
 
     const resetToken = jwt.sign(
       { userId: user.id, email: user.email },
       secret,
-      { expiresIn: "15m" }
+      { expiresIn: "15m" },
     );
 
-    const resetLink = `http://${envVariables.HOST || "localhost"}:${envVariables.PORT || 3000}/api/auth/reset-password?token=${resetToken}`;
-    
+    const resetLink = `http://${envVariables.HOST || "localhost"}:${envVariables.PORT || 3001}/api/auth/reset-password?token=${resetToken}`;
+
     // Dispatch reset email securely
     await sendPasswordResetEmail(user.email, resetLink);
 
     // For team testing: expose resetLink in response if not in production mode
-    const responseData = envVariables.NODE_ENV !== "production" ? { resetLink, resetToken } : null;
+    const responseData =
+      envVariables.NODE_ENV !== "production" ? { resetLink, resetToken } : null;
 
     return sendSuccess(
       res,
       envVariables.NODE_ENV !== "production"
         ? "Password reset link generated successfully. (Exposed in response for testing/development.)"
         : "If this email is registered, a password reset link has been sent successfully.",
-      responseData
+      responseData,
     );
   } catch (error) {
     next(error);
@@ -247,7 +263,12 @@ const resetPassword = async (req, res, next) => {
     }
 
     if (password.length < 6) {
-      return sendError(res, "Password must be at least 6 characters long.", null, 400);
+      return sendError(
+        res,
+        "Password must be at least 6 characters long.",
+        null,
+        400,
+      );
     }
 
     // Decode token to get user ID without verification first
@@ -255,7 +276,12 @@ const resetPassword = async (req, res, next) => {
     try {
       decoded = jwt.decode(token);
       if (!decoded || !decoded.userId) {
-        return sendError(res, "Invalid password reset token format.", null, 400);
+        return sendError(
+          res,
+          "Invalid password reset token format.",
+          null,
+          400,
+        );
       }
     } catch (err) {
       return sendError(res, "Invalid password reset token format.", null, 400);
@@ -269,14 +295,24 @@ const resetPassword = async (req, res, next) => {
     // Verify token using JWT_SECRET + current password hash
     const jwtSecret = envVariables.JWT;
     if (!jwtSecret) {
-      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+      return sendError(
+        res,
+        "Internal server configuration error. JWT key missing.",
+        null,
+        500,
+      );
     }
     const secret = jwtSecret + user.password;
 
     try {
       jwt.verify(token, secret);
     } catch (err) {
-      return sendError(res, "Invalid or expired password reset token.", null, 400);
+      return sendError(
+        res,
+        "Invalid or expired password reset token.",
+        null,
+        400,
+      );
     }
 
     // Hash new password
@@ -297,21 +333,33 @@ const resetPassword = async (req, res, next) => {
  */
 const googleAuth = async (req, res, next) => {
   try {
-    const { idToken, googleId, email, firstName, lastName, bypassVerification } = req.body;
+    const {
+      idToken,
+      googleId,
+      email,
+      firstName,
+      lastName,
+      bypassVerification,
+    } = req.body;
 
     let googleUser = null;
 
     // Developer bypass verification if specified and NOT in production
     if (bypassVerification && envVariables.NODE_ENV !== "production") {
       if (!googleId || !email) {
-        return sendError(res, "googleId and email are required for bypass authentication.", null, 400);
+        return sendError(
+          res,
+          "googleId and email are required for bypass authentication.",
+          null,
+          400,
+        );
       }
       googleUser = {
         googleId,
         email,
         firstName: firstName || "",
         lastName: lastName || "",
-        picture: null
+        picture: null,
       };
     } else {
       if (!idToken) {
@@ -348,7 +396,12 @@ const googleAuth = async (req, res, next) => {
     // Secret Key for JWT
     const jwtSecret = envVariables.JWT;
     if (!jwtSecret) {
-      return sendError(res, "Internal server configuration error. JWT key missing.", null, 500);
+      return sendError(
+        res,
+        "Internal server configuration error. JWT key missing.",
+        null,
+        500,
+      );
     }
 
     // Generate Access Token (1 Hour) & Refresh Token (7 Days)
@@ -369,7 +422,9 @@ const googleAuth = async (req, res, next) => {
       userId: user.id,
       accessToken,
       refreshToken,
-      isNewUser: !user.created_at || (Date.now() - new Date(user.created_at).getTime() < 10000),
+      isNewUser:
+        !user.created_at ||
+        Date.now() - new Date(user.created_at).getTime() < 10000,
     });
   } catch (error) {
     next(error);
