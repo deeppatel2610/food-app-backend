@@ -117,6 +117,25 @@ const getWorkoutTypeById = async (id) => {
 };
 
 /**
+ * Fetch a single workout session by its ID.
+ */
+const getWorkoutById = async (workoutId) => {
+  const query = `
+    SELECT 
+      w.*,
+      wt.name AS workout_type_name,
+      wt.category AS workout_type_category,
+      wt.icon_url AS workout_type_icon_url,
+      wt.is_gps_enabled
+    FROM workouts w
+    JOIN workout_types wt ON w.workout_type_id = wt.id
+    WHERE w.id = $1;
+  `;
+  const result = await pool.query(query, [workoutId]);
+  return result.rows[0];
+};
+
+/**
  * Create/Start a new active workout session.
  */
 const createWorkout = async ({ userId, workoutTypeId, status = "in_progress", startTime }) => {
@@ -245,6 +264,69 @@ const finishWorkout = async (workoutId, finishData = {}) => {
 };
 
 /**
+ * Update the status and optional metrics of a workout session (e.g., in_progress, completed, paused, cancelled).
+ */
+const updateWorkoutStatus = async (workoutId, updateData = {}) => {
+  const {
+    status,
+    endTime = updateData.endTime || updateData.end_time || null,
+    durationSeconds = updateData.durationSeconds ?? updateData.duration_seconds,
+    distanceMeters = updateData.distanceMeters ?? updateData.distance_meters,
+    caloriesBurned = updateData.caloriesBurned ?? updateData.calories_burned,
+    elevationGainMeters = updateData.elevationGainMeters ?? updateData.elevation_gain_meters,
+    averageSpeedMps = updateData.averageSpeedMps ?? updateData.average_speed_mps,
+    averagePaceSecPerKm = updateData.averagePaceSecPerKm ?? updateData.average_pace_sec_per_km,
+    notes = updateData.notes,
+  } = updateData;
+
+  const query = `
+    WITH updated AS (
+      UPDATE workouts
+      SET status = COALESCE($2, status),
+          end_time = CASE 
+            WHEN $3::timestamptz IS NOT NULL THEN $3::timestamptz
+            WHEN $2 = 'completed' AND end_time IS NULL THEN NOW()
+            WHEN $2 = 'in_progress' THEN NULL
+            ELSE end_time
+          END,
+          duration_seconds = COALESCE($4, duration_seconds),
+          distance_meters = COALESCE($5, distance_meters),
+          calories_burned = COALESCE($6, calories_burned),
+          elevation_gain_meters = COALESCE($7, elevation_gain_meters),
+          average_speed_mps = COALESCE($8, average_speed_mps),
+          average_pace_sec_per_km = COALESCE($9, average_pace_sec_per_km),
+          notes = COALESCE($10, notes)
+      WHERE id = $1
+      RETURNING *
+    )
+    SELECT 
+      w.*,
+      wt.name AS workout_type_name,
+      wt.category AS workout_type_category,
+      wt.icon_url AS workout_type_icon_url,
+      wt.is_gps_enabled
+    FROM updated w
+    JOIN workout_types wt ON w.workout_type_id = wt.id;
+  `;
+
+  const values = [
+    workoutId,
+    status || null,
+    endTime || null,
+    durationSeconds !== undefined ? durationSeconds : null,
+    distanceMeters !== undefined ? distanceMeters : null,
+    caloriesBurned !== undefined ? caloriesBurned : null,
+    elevationGainMeters !== undefined ? elevationGainMeters : null,
+    averageSpeedMps !== undefined ? averageSpeedMps : null,
+    averagePaceSecPerKm !== undefined ? averagePaceSecPerKm : null,
+    notes !== undefined ? notes : null,
+  ];
+
+  const result = await pool.query(query, values);
+  return result.rows[0];
+};
+
+/**
  * Retrieve workout history log for a user.
  */
 const getWorkoutHistoryByUserId = async (userId) => {
@@ -315,10 +397,12 @@ module.exports = {
   createWorkoutTables,
   getWorkoutTypes,
   getWorkoutTypeById,
+  getWorkoutById,
   createWorkout,
   saveWorkoutLocations,
   getLocationsByWorkoutId,
   finishWorkout,
+  updateWorkoutStatus,
   getWorkoutHistoryByUserId,
   getActiveWorkoutByUserId,
   clearWorkoutLocations,

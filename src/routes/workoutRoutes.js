@@ -7,6 +7,7 @@ const {
   saveLocations,
   fetchWorkoutLocations,
   stopWorkout,
+  updateWorkoutStatusController,
   fetchWorkoutHistory,
   cleanLocations,
 } = require("../controller/workoutController");
@@ -240,6 +241,138 @@ router.get("/locations/:workoutId", verifyToken, fetchWorkoutLocations);
  *         description: Internal Server Error
  */
 router.post("/stop", verifyToken, stopWorkout);
+
+/**
+ * @swagger
+ * /workout/status:
+ *   put:
+ *     summary: Update workout session status (e.g., in_progress to completed) (Protected by JWT)
+ *     tags: [Workout]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               workoutId:
+ *                 type: integer
+ *                 description: ID of workout session (optional if updating active workout or passed in URL)
+ *                 example: 1
+ *               status:
+ *                 type: string
+ *                 description: New workout status ('in_progress', 'completed', 'paused', 'cancelled')
+ *                 example: "completed"
+ *               durationSeconds:
+ *                 type: integer
+ *                 description: Total workout duration in seconds (optional)
+ *                 example: 1800
+ *               distanceMeters:
+ *                 type: number
+ *                 description: Total distance in meters (optional)
+ *                 example: 5000.00
+ *               caloriesBurned:
+ *                 type: number
+ *                 description: Estimated calories burned (optional)
+ *                 example: 320.50
+ *               elevationGainMeters:
+ *                 type: number
+ *                 description: Total elevation gain in meters (optional)
+ *                 example: 45.0
+ *               averageSpeedMps:
+ *                 type: number
+ *                 description: Average speed in meters per second (optional)
+ *                 example: 2.78
+ *               averagePaceSecPerKm:
+ *                 type: integer
+ *                 description: Average pace in seconds per kilometer (optional)
+ *                 example: 360
+ *               notes:
+ *                 type: string
+ *                 description: Optional summary notes or remarks
+ *                 example: "Morning run completed"
+ *     responses:
+ *       200:
+ *         description: Workout status updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       400:
+ *         description: Bad Request (missing status or invalid workoutId)
+ *       401:
+ *         description: Unauthorized (missing or invalid JWT token)
+ *       403:
+ *         description: Forbidden (workout belongs to another user)
+ *       404:
+ *         description: Workout session not found
+ *       409:
+ *         description: Conflict (another workout session is already in progress)
+ *       500:
+ *         description: Internal Server Error
+ */
+router.put("/status", verifyToken, updateWorkoutStatusController);
+
+/**
+ * @swagger
+ * /workout/status/{workoutId}:
+ *   put:
+ *     summary: Update workout status by workout ID in path (Protected by JWT)
+ *     tags: [Workout]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workoutId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the workout to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - status
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 description: New workout status ('in_progress', 'completed', 'paused', 'cancelled')
+ *                 example: "completed"
+ *               durationSeconds:
+ *                 type: integer
+ *                 example: 1800
+ *               distanceMeters:
+ *                 type: number
+ *                 example: 5000.00
+ *               caloriesBurned:
+ *                 type: number
+ *                 example: 320.50
+ *               notes:
+ *                 type: string
+ *                 example: "Morning run completed"
+ *     responses:
+ *       200:
+ *         description: Workout status updated successfully
+ *       400:
+ *         description: Bad Request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Workout session not found
+ *       500:
+ *         description: Internal Server Error
+ */
+router.put("/status/:workoutId", verifyToken, updateWorkoutStatusController);
+router.put("/:workoutId/status", verifyToken, updateWorkoutStatusController);
 
 /**
  * @swagger

@@ -1,6 +1,6 @@
 # Food App Backend API
 
-A production-ready Node.js Express backend for the **Food App**, featuring secure user authentication, BMI reports, community progress feed sharing, and AI-powered food image analysis using the Google Gemini API.
+A production-ready Node.js Express backend for the **Food App**, featuring secure user authentication, BMI reports, workout tracking, and AI-powered food image analysis using the Google Gemini API.
 
 ---
 
@@ -9,7 +9,7 @@ A production-ready Node.js Express backend for the **Food App**, featuring secur
 - **User Authentication & Profiles**: Register, secure login, JWT-based route protection, session refreshes, and secure password reset workflows.
 - **AI Food Recognition & Nutrition**: Upload food images to analyze them via Gemini AI, extracting ingredients, estimated portion sizes, nutrition values (calories, protein, carbs, fat, sugar), and health verdicts.
 - **BMI & Calorie Calculators**: Automates Body Mass Index reports, weight classifications, and dynamic daily calorie budget estimates based on user metrics.
-- **Community Transformations Feed**: Allows users to post "Before & After" diet/exercise transformation metrics and photos, like posts, and write comments.
+- **Workout & Activity Tracking**: Track workout sessions, GPS location routes, exercise metrics, and automated monthly location data cleanup.
 - **Harden Security Systems**: Implements global rate limiting, security headers (Helmet), CORS access control, and dynamic DB SSL for production environments.
 
 ---
@@ -76,7 +76,7 @@ npm install
 npm start
 ```
 
-Once started, the application will automatically create all required database tables (`users`, `food_analyses`, `posts`, `post_likes`, and `post_comments`) if they do not exist.
+Once started, the application will automatically create all required database tables (`users`, `food_analyses`, `workouts`, `workout_types`, and `workout_locations`) if they do not exist.
 
 ---
 
@@ -99,8 +99,10 @@ The API includes interactive Swagger documentation which can be accessed once th
 | `/api/user`                 | `PUT`  | Edits profile metrics and recalculates BMI      | Protected (JWT) |
 | `/api/food/analyze`         | `POST` | Analyzes uploaded food photo via Gemini AI      | Protected (JWT) |
 | `/api/food/history`         | `GET`  | Retrieves user food analysis logs               | Protected (JWT) |
-| `/api/community`            | `GET`  | Retrieves transformation posts feed             | Protected (JWT) |
-| `/api/community`            | `POST` | Publishes a before/after progress post          | Protected (JWT) |
+| `/api/workout/types`        | `GET`  | Retrieves supported workout types & metadata    | Protected (JWT) |
+| `/api/workout/start`        | `POST` | Starts a new workout tracking session           | Protected (JWT) |
+| `/api/workout/stop`         | `POST` | Completes an active workout session             | Protected (JWT) |
+| `/api/workout/status`       | `PUT`  | Updates workout status (e.g. in_progress -> completed) | Protected (JWT) |
 
 ---
 

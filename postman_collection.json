@@ -158,6 +158,33 @@
           "path": ["api", "food", "history", "1"]
         }
       }
+    },
+    {
+      "name": "Update Workout Status",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_ACCESS_TOKEN_HERE"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"workoutId\": 1,\n  \"status\": \"completed\",\n  \"durationSeconds\": 1800,\n  \"distanceMeters\": 5000.00,\n  \"caloriesBurned\": 320.50,\n  \"notes\": \"Morning run completed\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/workout/status",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "workout", "status"]
+        }
+      }
     }
   ]
 }
