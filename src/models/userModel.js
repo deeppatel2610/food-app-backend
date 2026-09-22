@@ -38,6 +38,7 @@ const createUserTable = async () => {
       await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) UNIQUE;");
       await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_id VARCHAR(255) UNIQUE;");
       await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_id VARCHAR(255) UNIQUE;");
+      await pool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_bmi_report JSONB;");
     } catch (migError) {
       console.warn("Non-blocking DB migration warning:", migError.message);
     }
@@ -227,6 +228,20 @@ const updateUserPassword = async (userId, hashedPassword) => {
   return result.rows[0];
 };
 
+/**
+ * Save or update AI-generated BMI report for a user
+ */
+const saveUserAIBmiReport = async (userId, aiBmiReport) => {
+  const query = `
+    UPDATE users 
+    SET ai_bmi_report = $1, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $2 AND is_delete = FALSE
+    RETURNING id, first_name, last_name, username, email, bmi, ai_bmi_report;
+  `;
+  const result = await pool.query(query, [JSON.stringify(aiBmiReport), userId]);
+  return result.rows[0];
+};
+
 module.exports = {
   createUserTable,
   findUserByEmailOrUsername,
@@ -240,4 +255,5 @@ module.exports = {
   findUserByFacebookId,
   findUserByEmail,
   linkGoogleId,
+  saveUserAIBmiReport,
 };

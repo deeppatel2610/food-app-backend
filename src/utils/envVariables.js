@@ -25,9 +25,11 @@ module.exports = {
   HOST: process.env.IP || "[IP_ADDRESS]",
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || "http://localhost:3001",
-  SMTP_HOST: process.env.SMTP_HOST || "smtp.mailtrap.io",
-  SMTP_PORT: process.env.SMTP_PORT || 2525,
+  SMTP_HOST: process.env.SMTP_HOST || "smtp-relay.brevo.com",
+  SMTP_PORT: process.env.SMTP_PORT || 587,
   SMTP_USER: process.env.SMTP_USER,
   SMTP_PASSWORD: process.env.SMTP_PASSWORD,
-  EMAIL_FROM: process.env.EMAIL_FROM || "noreply@foodapp.com",
+  EMAIL_FROM: process.env.EMAIL_FROM || "deeppatel100267@gmail.com",
+  EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME || "Food App",
 };
+

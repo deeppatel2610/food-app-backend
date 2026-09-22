@@ -91,10 +91,12 @@ The API includes interactive Swagger documentation which can be accessed once th
 
 | Route                       | Method | Description                                     | Access          |
 | --------------------------- | ------ | ----------------------------------------------- | --------------- |
-| `/api/auth/register`        | `POST` | Registers a new user                            | Public          |
+| `/api/auth/register`        | `POST` | Step 1: Submits signup info & sends email OTP  | Public          |
+| `/api/auth/verify-otp`      | `POST` | Step 2: Verifies OTP & creates user in DB       | Public          |
+| `/api/auth/resend-otp`      | `POST` | Resends fresh 6-digit OTP code to email         | Public          |
 | `/api/auth/login`           | `POST` | Logs in and returns access/refresh tokens       | Public          |
-| `/api/auth/forgot-password` | `POST` | Dispatches reset password links                 | Public          |
-| `/api/auth/reset-password`  | `POST` | Resets password using valid token               | Public          |
+| `/api/auth/forgot-password` | `POST` | Sends 6-digit reset code & link via Bird email  | Public          |
+| `/api/auth/reset-password`  | `POST` | Resets password & returns login tokens          | Public          |
 | `/api/user`                 | `GET`  | Retrieves profile, BMI report, & calorie budget | Protected (JWT) |
 | `/api/user`                 | `PUT`  | Edits profile metrics and recalculates BMI      | Protected (JWT) |
 | `/api/food/analyze`         | `POST` | Analyzes uploaded food photo via Gemini AI      | Protected (JWT) |
